@@ -1,5 +1,7 @@
 # Spec Técnica — App Android (Kotlin) · [POC Rastreamento de Entregadores](https://claude.ai/chat/16cda60c-4194-4047-bc85-60d8a2639e1e)
 
+> developing: https://claude.ai/chat/156d8511-a23e-4f1f-8b94-29197f1fc8cb
+
 **Versão:** 0.5 · POC
 **Plataforma:** Android (API 26+, Android 8.0 Oreo em diante)
 **Linguagem:** Kotlin
@@ -618,3 +620,6 @@ Em vez de publicar uma mensagem MQTT a cada envio, acumula 3-5 coordenadas e env
 ### 11.6 Reinício automático após reboot
 
 Adicionar `RECEIVE_BOOT_COMPLETED` no manifest para que o `TurnoReceiver` seja disparado quando o celular reinicia. O receiver consulta o horário salvo localmente e reagenda os alarmes. Sem isso, se o entregador reiniciar o celular, o app não acorda no horário até que ele abra manualmente.
+
+### 12.1 Se quiser reduzir o drift no futuro
+Se quiser reduzir o drift no futuro, a spec já menciona isso na seção 11.4 — usar PRIORITY_BALANCED_POWER_ACCURACY quando parado, que funde GPS + WiFi + rede celular e paradoxalmente dá posição mais estável em ambiente urbano do que GPS puro.

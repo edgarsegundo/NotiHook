@@ -1,6 +1,11 @@
 package com.neapp.tracker
 
 import android.Manifest
+import android.app.AlarmManager
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -9,12 +14,11 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
-import android.app.AlarmManager
 import com.neapp.tracker.api.ApiService
 import com.neapp.tracker.databinding.ActivityMainBinding
 import com.neapp.tracker.scheduler.SchedulerManager
+import com.neapp.tracker.service.LocationForegroundService
 import kotlinx.coroutines.launch
-
 
 class MainActivity : AppCompatActivity() {
 
@@ -24,7 +28,14 @@ class MainActivity : AppCompatActivity() {
         getSharedPreferences("tracker_prefs", MODE_PRIVATE)
     }
 
-    // Passo 2: pede background location depois que fine já foi concedido
+    private val statusReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            val status = intent.getStringExtra(LocationForegroundService.EXTRA_STATUS)
+            android.util.Log.d("StatusReceiver", "Received status: $status")
+            updateStatusUI(status)
+        }
+    }
+
     private val backgroundLocationRequest = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
@@ -39,7 +50,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // Passo 1: pede fine + coarse location
     private val fineLocationRequest = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
@@ -50,14 +60,12 @@ class MainActivity : AppCompatActivity() {
             return@registerForActivityResult
         }
 
-        // Fine concedido — agora pede background se necessário
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             val backgroundGranted = ContextCompat.checkSelfPermission(
                 this, Manifest.permission.ACCESS_BACKGROUND_LOCATION
             ) == PackageManager.PERMISSION_GRANTED
 
             if (!backgroundGranted) {
-                // Mostra explicação antes de pedir background
                 Toast.makeText(
                     this,
                     "Please allow location access 'All the time' on the next screen",
@@ -80,6 +88,17 @@ class MainActivity : AppCompatActivity() {
         val savedId = prefs.getString("driver_id", "")
         binding.editDriverId.setText(savedId)
 
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(
+                    this, Manifest.permission.POST_NOTIFICATIONS
+                ) != PackageManager.PERMISSION_GRANTED
+            ) {
+                registerForActivityResult(
+                    ActivityResultContracts.RequestPermission()
+                ) {}.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
+
         binding.btnConfirm.setOnClickListener {
             val id = binding.editDriverId.text.toString().trim()
             if (id.isEmpty()) {
@@ -88,6 +107,39 @@ class MainActivity : AppCompatActivity() {
             }
             prefs.edit().putString("driver_id", id).apply()
             requestPermissionsIfNeeded()
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        val filter = IntentFilter(LocationForegroundService.ACTION_STATUS_UPDATE)
+        ContextCompat.registerReceiver(
+            this,
+            statusReceiver,
+            filter,
+            ContextCompat.RECEIVER_NOT_EXPORTED
+        )
+    }
+
+    override fun onPause() {
+        super.onPause()
+        unregisterReceiver(statusReceiver)
+    }
+
+    private fun updateStatusUI(status: String?) {
+        when (status) {
+            LocationForegroundService.STATUS_ACTIVE -> {
+                binding.statusText.text = "● Tracking active"
+                binding.statusText.setTextColor(getColor(android.R.color.holo_green_dark))
+            }
+            LocationForegroundService.STATUS_NO_SIGNAL -> {
+                binding.statusText.text = "● No signal"
+                binding.statusText.setTextColor(getColor(android.R.color.holo_red_dark))
+            }
+            else -> {
+                binding.statusText.text = "● Sleeping"
+                binding.statusText.setTextColor(getColor(android.R.color.darker_gray))
+            }
         }
     }
 
@@ -140,7 +192,6 @@ class MainActivity : AppCompatActivity() {
                     .putInt("idle_interval_seconds", config.idleIntervalSeconds)
                     .apply()
 
-                // Verifica permissão de alarme exato antes de agendar
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                     val alarmManager = getSystemService(AlarmManager::class.java)
                     if (!alarmManager.canScheduleExactAlarms()) {
@@ -151,7 +202,6 @@ class MainActivity : AppCompatActivity() {
                             "Please allow 'Alarms & Reminders' permission in Settings",
                             Toast.LENGTH_LONG
                         ).show()
-                        // Abre a tela de configuração para o usuário conceder
                         val intent = android.content.Intent(
                             android.provider.Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM
                         )
@@ -179,5 +229,4 @@ class MainActivity : AppCompatActivity() {
             }
         }
     }
-
 }

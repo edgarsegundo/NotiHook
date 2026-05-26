@@ -9,7 +9,7 @@ import java.util.concurrent.TimeUnit
 
 object MqttManager {
 
-    private const val HOST = "your-vps.com"
+    private const val HOST = "sys.fastvistos.com.br"
     private const val PORT = 8883
 
     private var client: Mqtt3AsyncClient? = null
