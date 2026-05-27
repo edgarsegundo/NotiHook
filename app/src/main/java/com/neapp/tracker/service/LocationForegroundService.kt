@@ -15,6 +15,8 @@ import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
 import com.neapp.tracker.mqtt.MqttManager
+import com.neapp.tracker.ui.StatusManager
+import com.neapp.tracker.ui.TrackingStatus
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -31,10 +33,6 @@ class LocationForegroundService : Service() {
     companion object {
         private const val NOTIFICATION_ID = 1001
         private const val CHANNEL_ID = "tracking_channel"
-        const val ACTION_STATUS_UPDATE = "com.neapp.tracker.STATUS_UPDATE"
-        const val EXTRA_STATUS = "status"
-        const val STATUS_ACTIVE = "ACTIVE"
-        const val STATUS_NO_SIGNAL = "NO_SIGNAL"
     }
 
     override fun onCreate() {
@@ -50,7 +48,7 @@ class LocationForegroundService : Service() {
         startForeground(NOTIFICATION_ID, buildNotification("Tracking active"))
         MqttManager.connect(driverId)
         startLocationUpdates()
-        broadcastStatus(STATUS_ACTIVE)
+        StatusManager.setStatus(TrackingStatus.ACTIVE)
 
         return START_STICKY
     }
@@ -69,7 +67,7 @@ class LocationForegroundService : Service() {
             )
         } catch (e: SecurityException) {
             e.printStackTrace()
-            broadcastStatus(STATUS_NO_SIGNAL)
+            StatusManager.setStatus(TrackingStatus.NO_SIGNAL)
             stopSelf()
         }
     }
@@ -78,10 +76,10 @@ class LocationForegroundService : Service() {
         override fun onLocationResult(result: LocationResult) {
             result.lastLocation?.let { location ->
                 if (MqttManager.isConnected()) {
-                    broadcastStatus(STATUS_ACTIVE)
+                    StatusManager.setStatus(TrackingStatus.ACTIVE)
                     updateNotification("Tracking active — GPS ✓")
                 } else {
-                    broadcastStatus(STATUS_NO_SIGNAL)
+                    StatusManager.setStatus(TrackingStatus.NO_SIGNAL)
                     updateNotification("No signal — reconnecting...")
                 }
                 serviceScope.launch {
@@ -89,13 +87,6 @@ class LocationForegroundService : Service() {
                 }
             }
         }
-    }
-
-    private fun broadcastStatus(status: String) {
-        val intent = Intent(ACTION_STATUS_UPDATE).apply {
-            putExtra(EXTRA_STATUS, status)
-        }
-        sendBroadcast(intent)
     }
 
     private fun createNotificationChannel() {
@@ -126,6 +117,7 @@ class LocationForegroundService : Service() {
 
     override fun onDestroy() {
         fusedLocationClient.removeLocationUpdates(locationCallback)
+        StatusManager.setStatus(TrackingStatus.SLEEPING)
         MqttManager.disconnect()
         super.onDestroy()
     }
