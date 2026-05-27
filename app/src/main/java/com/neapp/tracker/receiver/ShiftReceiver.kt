@@ -29,6 +29,10 @@ class ShiftReceiver : BroadcastReceiver() {
                 fetchConfigAndStart(context, driverId)
             }
             ACTION_SLEEP -> {
+                context.getSharedPreferences("tracker_prefs", Context.MODE_PRIVATE)
+                    .edit()
+                    .putBoolean("turno_ativo", false)
+                    .apply()
                 context.stopService(
                     Intent(context, LocationForegroundService::class.java)
                 )

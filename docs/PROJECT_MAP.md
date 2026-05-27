@@ -26,9 +26,31 @@ Sistema de rastreamento de entregadores em tempo real composto por:
 app/src/main/
 ├── java/com/neapp/tracker/
 │   ├── MainActivity.kt
-│   │   — Tela principal. Campo de driver ID, solicita permissões,
-│   │     consulta API, agenda turno via SchedulerManager.
-│   │     Observa StatusManager.status (StateFlow) para atualizar UI.
+│   │   — Tela principal. Campo de driver ID, consulta API, agenda turno.
+│   │     Ao confirmar ID pela primeira vez: lança OnboardingActivity.
+│   │     onResume: verifica permissões via PermissionChecker e exibe
+│   │     bannerAviso (laranja) se alguma foi revogada, com link para
+│   │     OnboardingActivity.
+│   │
+│   ├── permission/                          ← NOVO (spec 1.1)
+│   │   ├── PermissionStatus.kt
+│   │   │   — Data class: backgroundLocation, bateria, tudoOk.
+│   │   ├── PermissionChecker.kt
+│   │   │   — Centraliza toda verificação de permissão.
+│   │   │     temBackgroundLocation(): false se API >= Q e não concedida.
+│   │   │     estaExcluidoDeBateria(): PowerManager.isIgnoringBatteryOptimizations.
+│   │   │     resumo(): retorna PermissionStatus.
+│   │   └── OnboardingActivity.kt
+│   │       — Fluxo único pós-confirmação de ID.
+│   │         Passo 1: explica → pede ACCESS_FINE_LOCATION →
+│   │           se concedida: pede ACCESS_BACKGROUND_LOCATION.
+│   │           se negada: mostra aviso amarelo, segue.
+│   │         Passo 2: explica → abre diálogo nativo de bateria
+│   │           (Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).
+│   │           onResume detecta retorno e exibe resumo.
+│   │         Resumo: mostra status de cada permissão com botão
+│   │           "Corrigir" individual. Botão "Iniciar" sempre habilitado.
+│   │           Ao continuar: grava onboarding_done=true, retorna RESULT_OK.
 │   │
 │   ├── model/
 │   │   ├── LocationPayload.kt
@@ -61,9 +83,10 @@ app/src/main/
 │   │   │   — BroadcastReceiver. Recebe ACTION_WAKE, ACTION_SLEEP,
 │   │   │     ACTION_CHECK_CONFIG do AlarmManager.
 │   │   │     No WAKE: busca config na API e inicia LocationForegroundService.
-│   │   │     No SLEEP: para o service e reagenda para o dia seguinte.
+│   │   │     No SLEEP: grava turno_ativo=false, para o service,
+│   │   │       reagenda para o dia seguinte.
 │   │   │     No CHECK_CONFIG: compara config do servidor com a local,
-│   │   │     reagenda se mudou.
+│   │   │       reagenda se mudou.
 │   │   └── BootReceiver.kt
 │   │       — BroadcastReceiver. Escuta BOOT_COMPLETED.
 │   │         Ao reiniciar o celular, lê config salva em SharedPreferences
@@ -72,10 +95,12 @@ app/src/main/
 │   ├── service/
 │   │   └── LocationForegroundService.kt
 │   │       — ForegroundService. Roda durante o turno.
+│   │         onStartCommand: grava turno_ativo=true em SharedPreferences.
+│   │         onDestroy: se turno_ativo=true, agenda reinício em 5s via
+│   │           AlarmManager (ACTION_WAKE no ShiftReceiver) — auto-reinício
+│   │           caso o SO mate o service durante o turno.
 │   │         Coleta GPS via FusedLocationProviderClient a cada intervalMs.
 │   │         Publica via MqttManager a cada update.
-│   │         Atualiza StatusManager com ACTIVE ou NO_SIGNAL.
-│   │         Notificação persistente obrigatória pelo Android.
 │   │
 │   └── ui/
 │       └── StatusManager.kt
@@ -84,15 +109,22 @@ app/src/main/
 │             MainActivity observa esse flow para atualizar a UI.
 │
 ├── res/layout/
-│   └── activity_main.xml
-│       — Layout simples: EditText (driver ID), Button (Confirm),
-│         TextView (statusText — cor muda com o estado).
+│   ├── activity_main.xml
+│   │   — Layout: bannerAviso (TextView laranja, gone por padrão),
+│   │     EditText (driver ID), Button (Confirm), TextView (statusText).
+│   └── activity_onboarding.xml      ← NOVO (spec 1.1)
+│       — stepCard: título + corpo + botão (reutilizado nos passos 1 e 2).
+│         summaryCard: dois itens (localização, bateria) cada um com
+│         status colorido, mensagem de problema e botão "Corrigir";
+│         botão "Iniciar rastreamento" sempre habilitado.
 │
 └── AndroidManifest.xml
     — Permissões: ACCESS_FINE_LOCATION, ACCESS_BACKGROUND_LOCATION,
       FOREGROUND_SERVICE, FOREGROUND_SERVICE_LOCATION, INTERNET,
-      RECEIVE_BOOT_COMPLETED, SCHEDULE_EXACT_ALARM, POST_NOTIFICATIONS.
-      Declara LocationForegroundService, ShiftReceiver, BootReceiver.
+      RECEIVE_BOOT_COMPLETED, SCHEDULE_EXACT_ALARM, POST_NOTIFICATIONS,
+      REQUEST_IGNORE_BATTERY_OPTIMIZATIONS.            ← NOVA (spec 1.1)
+      Declara LocationForegroundService, ShiftReceiver, BootReceiver,
+      OnboardingActivity.                              ← NOVA (spec 1.1)
 ```
 
 **Arquivos de build:**
@@ -241,3 +273,12 @@ Ver `DASHBOARD_SPEC.md` para detalhes completos.
 2. **Intervalo dinâmico por velocidade** — em movimento 10s, parado 30s (código já comentado no `LocationForegroundService`)
 3. **FCM** — para acordar o app imediatamente quando horário muda no servidor
 4. **Teste de 4 horas contínuas** — critério 7 da spec original ainda não validado
+
+---
+
+## Spec implementadas
+
+| Spec | Versão | Descrição |
+|---|---|---|
+| `SPEC.md` | 0.5 | Arquitetura base: GPS + MQTT + AlarmManager + polling |
+| `SPEC.features.md` | 1.1 | Onboarding de permissões + auto-reinício do service |

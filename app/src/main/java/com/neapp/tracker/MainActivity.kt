@@ -2,9 +2,11 @@ package com.neapp.tracker
 
 import android.Manifest
 import android.app.AlarmManager
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.view.View
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
@@ -12,6 +14,8 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.neapp.tracker.api.ApiService
 import com.neapp.tracker.databinding.ActivityMainBinding
+import com.neapp.tracker.permission.OnboardingActivity
+import com.neapp.tracker.permission.PermissionChecker
 import com.neapp.tracker.scheduler.SchedulerManager
 import com.neapp.tracker.ui.StatusManager
 import com.neapp.tracker.ui.TrackingStatus
@@ -25,46 +29,10 @@ class MainActivity : AppCompatActivity() {
         getSharedPreferences("tracker_prefs", MODE_PRIVATE)
     }
 
-    private val backgroundLocationRequest = registerForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { granted ->
-        if (granted) {
-            confirmDriverId()
-        } else {
-            Toast.makeText(
-                this,
-                "Background location is required for tracking",
-                Toast.LENGTH_LONG
-            ).show()
-        }
-    }
-
-    private val fineLocationRequest = registerForActivityResult(
-        ActivityResultContracts.RequestMultiplePermissions()
-    ) { permissions ->
-        val fineGranted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true
-
-        if (!fineGranted) {
-            Toast.makeText(this, "Location permission is required", Toast.LENGTH_LONG).show()
-            return@registerForActivityResult
-        }
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            val backgroundGranted = ContextCompat.checkSelfPermission(
-                this, Manifest.permission.ACCESS_BACKGROUND_LOCATION
-            ) == PackageManager.PERMISSION_GRANTED
-
-            if (!backgroundGranted) {
-                Toast.makeText(
-                    this,
-                    "Please allow location access 'All the time' on the next screen",
-                    Toast.LENGTH_LONG
-                ).show()
-                backgroundLocationRequest.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
-            } else {
-                confirmDriverId()
-            }
-        } else {
+    private val onboardingLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == RESULT_OK) {
             confirmDriverId()
         }
     }
@@ -102,7 +70,29 @@ class MainActivity : AppCompatActivity() {
                 return@setOnClickListener
             }
             prefs.edit().putString("driver_id", id).apply()
-            requestPermissionsIfNeeded()
+            val onboardingDone = prefs.getBoolean("onboarding_done", false)
+            if (!onboardingDone) {
+                onboardingLauncher.launch(Intent(this, OnboardingActivity::class.java))
+            } else {
+                confirmDriverId()
+            }
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        val onboardingDone = prefs.getBoolean("onboarding_done", false)
+        if (!onboardingDone) return
+
+        val status = PermissionChecker(this).resumo()
+        if (!status.tudoOk) {
+            binding.bannerAviso.visibility = View.VISIBLE
+            binding.bannerAviso.text = "Permissões incompletas podem afetar o rastreamento."
+            binding.bannerAviso.setOnClickListener {
+                startActivity(Intent(this, OnboardingActivity::class.java))
+            }
+        } else {
+            binding.bannerAviso.visibility = View.GONE
         }
     }
 
@@ -121,40 +111,6 @@ class MainActivity : AppCompatActivity() {
                 binding.statusText.setTextColor(getColor(android.R.color.darker_gray))
             }
         }
-    }
-
-    private fun requestPermissionsIfNeeded() {
-        val fineGranted = ContextCompat.checkSelfPermission(
-            this, Manifest.permission.ACCESS_FINE_LOCATION
-        ) == PackageManager.PERMISSION_GRANTED
-
-        if (!fineGranted) {
-            fineLocationRequest.launch(
-                arrayOf(
-                    Manifest.permission.ACCESS_FINE_LOCATION,
-                    Manifest.permission.ACCESS_COARSE_LOCATION
-                )
-            )
-            return
-        }
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            val backgroundGranted = ContextCompat.checkSelfPermission(
-                this, Manifest.permission.ACCESS_BACKGROUND_LOCATION
-            ) == PackageManager.PERMISSION_GRANTED
-
-            if (!backgroundGranted) {
-                Toast.makeText(
-                    this,
-                    "Please allow location access 'All the time' on the next screen",
-                    Toast.LENGTH_LONG
-                ).show()
-                backgroundLocationRequest.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
-                return
-            }
-        }
-
-        confirmDriverId()
     }
 
     private fun confirmDriverId() {
