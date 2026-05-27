@@ -2,6 +2,7 @@ package com.neapp.tracker
 
 import android.Manifest
 import android.app.AlarmManager
+import android.app.AlertDialog
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
@@ -14,6 +15,8 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.neapp.tracker.api.ApiService
 import com.neapp.tracker.databinding.ActivityMainBinding
+import com.neapp.tracker.delivery.DeliveryOfferManager
+import com.neapp.tracker.model.DeliveryOffer
 import com.neapp.tracker.permission.OnboardingActivity
 import com.neapp.tracker.permission.PermissionChecker
 import com.neapp.tracker.scheduler.SchedulerManager
@@ -28,6 +31,8 @@ class MainActivity : AppCompatActivity() {
     private val prefs by lazy {
         getSharedPreferences("tracker_prefs", MODE_PRIVATE)
     }
+
+    private var lastShownOfferEventId: String? = null
 
     private val onboardingLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -60,6 +65,14 @@ class MainActivity : AppCompatActivity() {
         lifecycleScope.launch {
             StatusManager.status.collect { status ->
                 updateStatusUI(status)
+            }
+        }
+
+        lifecycleScope.launch {
+            DeliveryOfferManager.latestOffer.collect { offer ->
+                if (offer != null) {
+                    showOfferDialogIfNeeded(offer)
+                }
             }
         }
 
@@ -118,6 +131,26 @@ class MainActivity : AppCompatActivity() {
                 binding.statusText.setTextColor(getColor(android.R.color.darker_gray))
             }
         }
+    }
+
+    private fun showOfferDialogIfNeeded(offer: DeliveryOffer) {
+        if (lastShownOfferEventId == offer.eventId || isFinishing || isDestroyed) return
+        lastShownOfferEventId = offer.eventId
+
+        val body = buildString {
+            append(offer.message ?: "Nova entrega disponivel")
+            offer.pickup?.label?.let { append("\nOrigem: $it") }
+            offer.dropoff?.label?.let { append("\nDestino: $it") }
+            offer.distanceKm?.let { append("\nDistancia: ${String.format("%.1f", it)} km") }
+            offer.payout?.let { append("\nValor: R$ ${String.format("%.2f", it)}") }
+        }
+
+        AlertDialog.Builder(this)
+            .setTitle("Nova entrega")
+            .setMessage(body)
+            .setPositiveButton("Ver oferta") { dialog, _ -> dialog.dismiss() }
+            .setNegativeButton("Fechar") { dialog, _ -> dialog.dismiss() }
+            .show()
     }
 
     private fun confirmDriverId() {

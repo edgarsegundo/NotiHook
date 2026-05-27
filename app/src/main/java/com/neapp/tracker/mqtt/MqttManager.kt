@@ -5,7 +5,9 @@ import android.location.Location
 import com.google.gson.Gson
 import com.hivemq.client.mqtt.MqttClient
 import com.hivemq.client.mqtt.mqtt3.Mqtt3AsyncClient
+import com.neapp.tracker.delivery.DeliveryOfferManager
 import com.neapp.tracker.model.DeliveryConfig
+import com.neapp.tracker.model.DeliveryOffer
 import com.neapp.tracker.model.LocationPayload
 import com.neapp.tracker.scheduler.SchedulerManager
 import kotlinx.serialization.json.Json
@@ -40,6 +42,7 @@ object MqttManager {
             ?.whenComplete { _, throwable ->
                 if (throwable == null) {
                     subscribeToConfig(appContext, driverId)
+                    subscribeToDelivery(appContext, driverId)
                 }
             }
     }
@@ -52,6 +55,21 @@ object MqttManager {
                 try {
                     val newConfig = gson.fromJson(json, DeliveryConfig::class.java)
                     saveAndReschedule(context, newConfig)
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+            ?.send()
+    }
+
+    private fun subscribeToDelivery(context: Context, driverId: String) {
+        client?.subscribeWith()
+            ?.topicFilter("drivers/$driverId/delivery")
+            ?.callback { publish ->
+                val json = String(publish.payloadAsBytes)
+                try {
+                    val offer = gson.fromJson(json, DeliveryOffer::class.java)
+                    DeliveryOfferManager.onOfferReceived(context, offer)
                 } catch (e: Exception) {
                     e.printStackTrace()
                 }
