@@ -27,7 +27,9 @@ app/src/main/
 ├── java/com/neapp/tracker/
 │   ├── MainActivity.kt
 │   │   — Tela principal. Campo de driver ID, consulta API, agenda turno.
-│   │     Ao confirmar ID pela primeira vez: lança OnboardingActivity.
+│   │     onCreate: se driver_id já salvo e onboarding_done=true, chama
+│   │       confirmDriverId() automaticamente — sem precisar pressionar botão.
+│   │     Botão "Atualizar": força nova busca de config e reagendamento.
 │   │     onResume: verifica permissões via PermissionChecker e exibe
 │   │     bannerAviso (laranja) se alguma foi revogada, com link para
 │   │     OnboardingActivity.
@@ -69,6 +71,9 @@ app/src/main/
 │   ├── mqtt/
 │   │   └── MqttManager.kt
 │   │       — Singleton. Conecta no EMQX via TLS porta 8883.
+│   │         connect(context, driverId): ao conectar, faz subscribe em
+│   │           drivers/{id}/config — ao receber mensagem, salva config
+│   │           localmente e chama SchedulerManager.schedule() imediatamente.
 │   │         Publica LocationPayload no tópico drivers/{id}/location.
 │   │         Reconexão automática com backoff 1s→30s.
 │   │
@@ -76,7 +81,9 @@ app/src/main/
 │   │   └── SchedulerManager.kt
 │   │       — Singleton. Avalia horário atual vs turno configurado.
 │   │         Agenda AlarmManager para acordar/dormir nos horários certos.
-│   │         Agenda polling de config a cada 1 hora.
+│   │         Polling de config a cada 5 min via setExactAndAllowWhileIdle
+│   │         encadeado (cada disparo agenda o próximo no finally).
+│   │         schedulePolling() é público — chamado pelo ShiftReceiver.
 │   │
 │   ├── receiver/
 │   │   ├── ShiftReceiver.kt
@@ -85,8 +92,11 @@ app/src/main/
 │   │   │     No WAKE: busca config na API e inicia LocationForegroundService.
 │   │   │     No SLEEP: grava turno_ativo=false, para o service,
 │   │   │       reagenda para o dia seguinte.
-│   │   │     No CHECK_CONFIG: compara config do servidor com a local,
-│   │   │       reagenda se mudou.
+│   │   │     No CHECK_CONFIG: compara shiftStart, shiftEnd e
+│   │   │       movingIntervalSeconds com valores locais. Se mudou:
+│   │   │       para o service se agora está fora da janela do turno,
+│   │   │       reagenda. Encadeia próximo poll no finally (sempre).
+│   │   │     Logs via Log.d("NeAppTracker") em todas as ações.
 │   │   └── BootReceiver.kt
 │   │       — BroadcastReceiver. Escuta BOOT_COMPLETED.
 │   │         Ao reiniciar o celular, lê config salva em SharedPreferences
@@ -111,7 +121,7 @@ app/src/main/
 ├── res/layout/
 │   ├── activity_main.xml
 │   │   — Layout: bannerAviso (TextView laranja, gone por padrão),
-│   │     EditText (driver ID), Button (Confirm), TextView (statusText).
+│   │     EditText (driver ID), Button ("Atualizar"), TextView (statusText).
 │   └── activity_onboarding.xml      ← NOVO (spec 1.1)
 │       — stepCard: título + corpo + botão (reutilizado nos passos 1 e 2).
 │         summaryCard: dois itens (localização, bateria) cada um com

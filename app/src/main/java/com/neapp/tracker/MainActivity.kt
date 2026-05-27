@@ -63,6 +63,13 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+        // Se já tem ID salvo e onboarding feito, busca config e agenda automaticamente
+        val onboardingDone = prefs.getBoolean("onboarding_done", false)
+        if (!savedId.isNullOrEmpty() && onboardingDone) {
+            confirmDriverId()
+        }
+
+        binding.btnConfirm.text = "Atualizar"
         binding.btnConfirm.setOnClickListener {
             val id = binding.editDriverId.text.toString().trim()
             if (id.isEmpty()) {

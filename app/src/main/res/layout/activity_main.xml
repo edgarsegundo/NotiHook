@@ -36,7 +36,7 @@
         android:id="@+id/btnConfirm"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Confirm"
+        android:text="Atualizar"
         android:layout_marginBottom="24dp"/>
 
     <TextView

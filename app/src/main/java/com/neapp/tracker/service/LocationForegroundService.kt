@@ -54,7 +54,7 @@ class LocationForegroundService : Service() {
             .apply()
 
         startForeground(NOTIFICATION_ID, buildNotification("Tracking active"))
-        MqttManager.connect(driverId)
+        MqttManager.connect(this, driverId)
         startLocationUpdates()
         StatusManager.setStatus(TrackingStatus.ACTIVE)
 
