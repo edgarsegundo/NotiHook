@@ -7,6 +7,16 @@
     android:padding="32dp">
 
     <TextView
+        android:id="@+id/bannerAviso"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#FF9800"
+        android:padding="12dp"
+        android:textSize="14sp"
+        android:layout_marginBottom="16dp"
+        android:visibility="gone"/>
+
+    <TextView
         android:text="NeApp Driver"
         android:textSize="24sp"
         android:textStyle="bold"
@@ -26,7 +36,7 @@
         android:id="@+id/btnConfirm"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Confirm"
+        android:text="Atualizar"
         android:layout_marginBottom="24dp"/>
 
     <TextView

@@ -1,8 +1,10 @@
 package com.neapp.tracker.service
 
+import android.app.AlarmManager
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.app.Service
 import android.content.Intent
 import android.os.IBinder
@@ -15,6 +17,7 @@ import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
 import com.neapp.tracker.mqtt.MqttManager
+import com.neapp.tracker.receiver.ShiftReceiver
 import com.neapp.tracker.ui.StatusManager
 import com.neapp.tracker.ui.TrackingStatus
 import kotlinx.coroutines.CoroutineScope
@@ -45,8 +48,13 @@ class LocationForegroundService : Service() {
         driverId = intent?.getStringExtra("driver_id") ?: ""
         intervalMs = intent?.getLongExtra("interval_ms", 15_000L) ?: 15_000L
 
+        getSharedPreferences("tracker_prefs", MODE_PRIVATE)
+            .edit()
+            .putBoolean("turno_ativo", true)
+            .apply()
+
         startForeground(NOTIFICATION_ID, buildNotification("Tracking active"))
-        MqttManager.connect(driverId)
+        MqttManager.connect(this, driverId)
         startLocationUpdates()
         StatusManager.setStatus(TrackingStatus.ACTIVE)
 
@@ -119,6 +127,23 @@ class LocationForegroundService : Service() {
         fusedLocationClient.removeLocationUpdates(locationCallback)
         StatusManager.setStatus(TrackingStatus.SLEEPING)
         MqttManager.disconnect()
+
+        val prefs = getSharedPreferences("tracker_prefs", MODE_PRIVATE)
+        if (prefs.getBoolean("turno_ativo", false)) {
+            val restartIntent = Intent(this, ShiftReceiver::class.java).apply {
+                action = ShiftReceiver.ACTION_WAKE
+            }
+            val pendingIntent = PendingIntent.getBroadcast(
+                this, 99, restartIntent,
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+            )
+            getSystemService(AlarmManager::class.java).setExactAndAllowWhileIdle(
+                AlarmManager.RTC_WAKEUP,
+                System.currentTimeMillis() + 5_000L,
+                pendingIntent
+            )
+        }
+
         super.onDestroy()
     }
 
