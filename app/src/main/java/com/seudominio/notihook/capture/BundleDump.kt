@@ -154,7 +154,7 @@ object BundleDump {
     /** Nomes legíveis das flags de Notification, para a UI de detalhe. */
     fun decodeFlags(flags: Int): List<String> {
         val names = linkedMapOf(
-            "SHOW_LIGHTS" to Notification.FLAG_SHOW_LIGHTS,
+            "SHOW_LIGHTS" to 1, // FLAG_SHOW_LIGHTS, deprecado mas ainda presente nos flags
             "ONGOING_EVENT" to Notification.FLAG_ONGOING_EVENT,
             "INSISTENT" to Notification.FLAG_INSISTENT,
             "ONLY_ALERT_ONCE" to Notification.FLAG_ONLY_ALERT_ONCE,

@@ -1,3 +1,83 @@
 <resources>
     <string name="app_name">NotiHook</string>
+
+    <!-- Navegação -->
+    <string name="nav_home">Início</string>
+    <string name="nav_settings">Configurações</string>
+    <string name="tab_events">Eventos</string>
+    <string name="tab_messages">Mensagens</string>
+    <string name="back">Voltar</string>
+
+    <!-- Status -->
+    <string name="status_title">Status</string>
+    <string name="status_access">Acesso a notificações</string>
+    <string name="status_access_on">Ativo</string>
+    <string name="status_access_off">Inativo</string>
+    <string name="status_service">Serviço</string>
+    <string name="status_service_connected">Conectado</string>
+    <string name="status_service_disconnected">Não conectado</string>
+    <string name="status_events">Eventos capturados</string>
+    <string name="status_messages">Mensagens</string>
+    <string name="status_last_event">Último evento</string>
+    <string name="status_paused">Captura pausada</string>
+
+    <string name="action_enable_access">Ativar acesso a notificações</string>
+    <string name="action_battery">Ajustar bateria</string>
+    <string name="action_import_active">Importar notificações ativas</string>
+
+    <string name="warn_restricted">Se o app foi instalado fora da Play Store, abra Configurações &gt; Apps &gt; NotiHook &gt; ⋮ &gt; Permitir configurações restritas e depois ative o acesso.</string>
+    <string name="warn_service_off">Ative o acesso a notificações para o serviço conectar.</string>
+    <string name="import_needs_service">O serviço precisa estar conectado para importar as ativas.</string>
+    <string name="import_done">%d notificações ativas importadas.</string>
+
+    <!-- Lista de eventos -->
+    <string name="search_events">Buscar em título, texto e extras</string>
+    <string name="search_messages">Buscar mensagens</string>
+    <string name="filter_hide_ongoing">Ocultar ongoing</string>
+    <string name="filter_hide_summaries">Ocultar resumos</string>
+    <string name="filter_channel">Canal</string>
+    <string name="filter_package">Pacote</string>
+    <string name="filter_clear">Limpar filtros</string>
+    <string name="empty_events">Nenhum evento capturado ainda.</string>
+    <string name="empty_messages">Nenhuma mensagem extraída ainda.</string>
+
+    <!-- Detalhe -->
+    <string name="detail_title">Detalhe do evento</string>
+    <string name="section_system">Sistema (StatusBarNotification)</string>
+    <string name="section_notification">Notification</string>
+    <string name="section_texts">Textos</string>
+    <string name="section_conversation">Conversa</string>
+    <string name="section_messages">Mensagens</string>
+    <string name="section_actions">Ações</string>
+    <string name="section_extras">Extras (dump completo)</string>
+    <string name="section_raw">JSON bruto</string>
+    <string name="action_copy_json">Copiar JSON</string>
+    <string name="action_share">Compartilhar</string>
+    <string name="action_delete_event">Apagar este evento</string>
+    <string name="action_prev">Anterior</string>
+    <string name="action_next">Próximo</string>
+    <string name="copied">JSON copiado.</string>
+    <string name="historic_messages">Mensagens históricas</string>
+
+    <!-- Configurações -->
+    <string name="settings_packages">Pacotes monitorados</string>
+    <string name="settings_add_package">Adicionar pacote</string>
+    <string name="settings_package_hint">ex.: com.whatsapp</string>
+    <string name="settings_add">Adicionar</string>
+    <string name="settings_remove">Remover</string>
+    <string name="settings_retention">Retenção</string>
+    <string name="settings_retention_days">Dias (0 = infinito)</string>
+    <string name="settings_retention_desc">Eventos mais antigos que isso são apagados ao abrir o app e a cada 24h.</string>
+    <string name="settings_pause">Pausar captura</string>
+    <string name="settings_pause_desc">O serviço continua ligado, mas ignora os eventos.</string>
+    <string name="settings_export">Exportar tudo (JSON)</string>
+    <string name="settings_delete_all">Apagar todos os dados</string>
+    <string name="settings_delete_all_confirm">Apagar todos os eventos e mensagens? Isso não pode ser desfeito.</string>
+    <string name="confirm">Confirmar</string>
+    <string name="cancel">Cancelar</string>
+    <string name="save">Salvar</string>
+    <string name="export_done">Exportado.</string>
+    <string name="export_failed">Falha ao exportar.</string>
+    <string name="deleted_all">Dados apagados.</string>
+    <string name="privacy_note">Os dados ficam só neste aparelho. O app não tem permissão de internet.</string>
 </resources>
