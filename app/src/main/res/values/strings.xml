@@ -67,7 +67,7 @@
     <string name="settings_remove">Remover</string>
     <string name="settings_retention">Retenção</string>
     <string name="settings_retention_days">Dias (0 = infinito)</string>
-    <string name="settings_retention_desc">Eventos mais antigos que isso são apagados ao abrir o app e a cada 24h.</string>
+    <string name="settings_retention_desc">Eventos mais antigos que isso são apagados ao abrir o app.</string>
     <string name="settings_pause">Pausar captura</string>
     <string name="settings_pause_desc">O serviço continua ligado, mas ignora os eventos.</string>
     <string name="settings_export">Exportar tudo (JSON)</string>

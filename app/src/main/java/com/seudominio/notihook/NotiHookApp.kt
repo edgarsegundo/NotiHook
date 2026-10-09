@@ -3,7 +3,6 @@ package com.seudominio.notihook
 import android.app.Application
 import com.seudominio.notihook.data.AppDatabase
 import com.seudominio.notihook.data.Repository
-import com.seudominio.notihook.data.RetentionWorker
 import com.seudominio.notihook.data.SettingsStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -21,7 +20,10 @@ class NotiHookApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
-        // Limpeza ao abrir, e depois a cada 24h via WorkManager.
+        // Limpeza ao abrir. Nao usamos WorkManager de proposito: ele injeta
+        // WAKE_LOCK, ACCESS_NETWORK_STATE, RECEIVE_BOOT_COMPLETED,
+        // FOREGROUND_SERVICE e DUMP no manifest, o que contraria a premissa
+        // de privilegio minimo deste app por uma limpeza diaria.
         scope.launch {
             try {
                 repository.applyRetention()
@@ -29,6 +31,5 @@ class NotiHookApp : Application() {
                 // Nunca impedir o app de abrir por causa da limpeza.
             }
         }
-        RetentionWorker.schedule(this)
     }
 }

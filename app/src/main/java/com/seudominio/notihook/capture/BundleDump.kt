@@ -4,9 +4,11 @@ import android.app.Notification
 import android.app.PendingIntent
 import android.graphics.Bitmap
 import android.graphics.drawable.Icon
+import android.os.Build
 import android.os.Bundle
 import android.os.Parcelable
 import android.widget.RemoteViews
+import androidx.annotation.RequiresApi
 import androidx.core.app.Person
 import org.json.JSONArray
 import org.json.JSONObject
@@ -79,7 +81,6 @@ object BundleDump {
                     node.put("value", NOT_SERIALIZABLE)
 
                 is Person -> node.put("value", personToJson(value))
-                is android.app.Person -> node.put("value", personToJson(Person.fromAndroidPerson(value)))
 
                 is BooleanArray -> node.put("value", JSONArray().apply { value.forEach { put(it) } })
                 is IntArray -> node.put("value", JSONArray().apply { value.forEach { put(it) } })
@@ -92,7 +93,11 @@ object BundleDump {
                 is Array<*> -> node.put("value", arrayToJson(value, depth))
                 is Iterable<*> -> node.put("value", arrayToJson(value.toList().toTypedArray(), depth))
 
-                else -> putString(node, value.toString())
+                else -> {
+                    // android.app.Person (API 28+) ou qualquer tipo desconhecido.
+                    val person = androidPersonToJson(value)
+                    if (person != null) node.put("value", person) else putString(node, value.toString())
+                }
             }
         } catch (t: Throwable) {
             node.put("value", "<erro: $t>")
@@ -118,13 +123,39 @@ object BundleDump {
                 is Boolean, is Int, is Long, is Short, is Byte, is Float, is Double ->
                     arr.put(element.toString())
                 is Person -> arr.put(personToJson(element))
-                is android.app.Person -> arr.put(personToJson(Person.fromAndroidPerson(element)))
-                is Parcelable -> arr.put(describe(element, depth + 1))
+                is Parcelable -> arr.put(androidPersonToJson(element) ?: describe(element, depth + 1))
                 else -> arr.put(try { element.toString() } catch (t: Throwable) { "<erro: $t>" })
             }
         }
         return arr
     }
+
+    /**
+     * android.app.Person só existe na API 28+; em versões anteriores a classe
+     * nem é carregada, então o teste de tipo fica atrás do guard de API.
+     */
+    @RequiresApi(Build.VERSION_CODES.P)
+    private fun androidPersonToJsonApi28(value: Any): JSONObject? {
+        val p = value as? android.app.Person ?: return null
+        return JSONObject().apply {
+            put("name", p.name?.toString() ?: JSONObject.NULL)
+            put("key", p.key ?: JSONObject.NULL)
+            put("uri", p.uri ?: JSONObject.NULL)
+            put("isBot", p.isBot)
+            put("isImportant", p.isImportant)
+        }
+    }
+
+    private fun androidPersonToJson(value: Any): JSONObject? =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            try {
+                androidPersonToJsonApi28(value)
+            } catch (t: Throwable) {
+                null
+            }
+        } else {
+            null
+        }
 
     private fun personToJson(p: Person): JSONObject = JSONObject().apply {
         put("name", p.name?.toString() ?: JSONObject.NULL)

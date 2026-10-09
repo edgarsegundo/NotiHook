@@ -2,6 +2,7 @@ package com.seudominio.notihook.capture
 
 import android.app.Notification
 import android.os.Build
+import androidx.annotation.RequiresApi
 import android.os.Bundle
 import android.os.Parcelable
 import android.service.notification.StatusBarNotification
@@ -138,30 +139,17 @@ object NotificationParser {
      * Serializa EXTRA_MESSAGES / EXTRA_HISTORIC_MESSAGES usando a API oficial
      * e, se ela falhar, caindo para a leitura manual dos Bundles.
      */
+    @Suppress("DEPRECATION") // fallbacks de propósito, para APIs antigas
     private fun messagesArray(extras: Bundle, key: String): JSONArray {
         val arr = JSONArray()
-        val raw: Array<Parcelable>? = safe {
-            @Suppress("DEPRECATION")
-            extras.getParcelableArray(key)
-        }
+        val raw: Array<Parcelable>? = safe { extras.getParcelableArray(key) }
         if (raw == null || raw.isEmpty()) return arr
 
-        val parsed = safe { Notification.MessagingStyle.Message.getMessagesFromBundleArray(raw) }
-        if (parsed != null) {
-            for (m in parsed) {
-                arr.put(
-                    JSONObject().apply {
-                        put("text", m.text?.toString() ?: "")
-                        put("timestamp", m.timestamp)
-                        put("senderName", m.senderPerson?.name?.toString() ?: m.sender?.toString() ?: JSONObject.NULL)
-                        put("senderKey", m.senderPerson?.key ?: JSONObject.NULL)
-                        put("senderUri", m.senderPerson?.uri ?: JSONObject.NULL)
-                        put("dataMimeType", m.dataMimeType ?: JSONObject.NULL)
-                        put("dataUri", m.dataUri?.toString() ?: JSONObject.NULL)
-                    }
-                )
-            }
-            return arr
+        // A API oficial só existe a partir da 30; abaixo disso vai direto para
+        // a leitura manual dos Bundles, que cobre o mesmo conteúdo.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            val parsed = safe { messagesFromApi(raw) }
+            if (parsed != null) return parsed
         }
 
         // Fallback manual: os elementos são Bundles com as chaves conhecidas.
@@ -177,6 +165,27 @@ object NotificationParser {
                     put("dataMimeType", b.getString("type") ?: JSONObject.NULL)
                     put("dataUri", b.getParcelable<Parcelable>("uri")?.toString() ?: JSONObject.NULL)
                     put("raw_bundle", true)
+                }
+            )
+        }
+        return arr
+    }
+
+    /** Caminho oficial (API 30+) para EXTRA_MESSAGES. */
+    @RequiresApi(Build.VERSION_CODES.R)
+    private fun messagesFromApi(raw: Array<Parcelable>): JSONArray {
+        val arr = JSONArray()
+        for (m in Notification.MessagingStyle.Message.getMessagesFromBundleArray(raw)) {
+            val person = m.senderPerson
+            arr.put(
+                JSONObject().apply {
+                    put("text", m.text?.toString() ?: "")
+                    put("timestamp", m.timestamp)
+                    put("senderName", person?.name?.toString() ?: JSONObject.NULL)
+                    put("senderKey", person?.key ?: JSONObject.NULL)
+                    put("senderUri", person?.uri ?: JSONObject.NULL)
+                    put("dataMimeType", m.dataMimeType ?: JSONObject.NULL)
+                    put("dataUri", m.dataUri?.toString() ?: JSONObject.NULL)
                 }
             )
         }
