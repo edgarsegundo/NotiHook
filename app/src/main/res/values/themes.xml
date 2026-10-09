@@ -1,9 +1,5 @@
-<resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Base application theme. -->
-    <style name="Base.Theme.NeApp" parent="Theme.Material3.DayNight.NoActionBar">
-        <!-- Customize your light theme here. -->
-        <!-- <item name="colorPrimary">@color/my_light_primary</item> -->
-    </style>
-
-    <style name="Theme.NeApp" parent="Base.Theme.NeApp" />
+<resources>
+    <!-- Tema mínimo apenas para a janela da Activity; a aparência real vem do
+         NotiHookTheme em Compose (ui/theme/Theme.kt). -->
+    <style name="Theme.NotiHook" parent="android:Theme.Material.Light.NoActionBar" />
 </resources>

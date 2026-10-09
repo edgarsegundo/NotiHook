@@ -1,37 +1,22 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
-    alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.ksp)
 }
 
 android {
-    namespace = "com.neapp.tracker"
+    namespace = "com.seudominio.notihook"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.neapp.tracker"
-        minSdk = 27
+        applicationId = "com.seudominio.notihook"
+        minSdk = 26
         targetSdk = 35
         versionCode = 1
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-
-        buildConfigField("String", "API_KEY", "\"649dba57b904fcab2b82b0cd871cac32dcc084e0bb07c9cfb276db5209a82daf\"")
-    }
-
-    packaging {
-        resources {
-            excludes += setOf(
-                "META-INF/INDEX.LIST",
-                "META-INF/io.netty.versions.properties",
-                "META-INF/DEPENDENCIES",
-                "META-INF/LICENSE",
-                "META-INF/LICENSE.txt",
-                "META-INF/NOTICE",
-                "META-INF/NOTICE.txt"
-            )
-        }
     }
 
     buildTypes {
@@ -49,44 +34,49 @@ android {
         targetCompatibility = JavaVersion.VERSION_11
     }
 
-    kotlinOptions {
-        jvmTarget = "11"
-    }
 
     buildFeatures {
-        viewBinding = true
+        compose = true
         buildConfig = true
+    }
+
+    testOptions {
+        unitTests.isIncludeAndroidResources = true
+    }
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11)
     }
 }
 
 dependencies {
     implementation(libs.androidx.core.ktx)
-    implementation(libs.androidx.appcompat)
-    implementation(libs.material)
-    implementation(libs.androidx.activity)
-    implementation(libs.androidx.constraintlayout)
+    implementation(libs.androidx.activity.compose)
 
-    // Lifecycle
-    implementation(libs.androidx.lifecycle.service)
-    implementation(libs.androidx.lifecycle.viewmodel)
+    implementation(platform(libs.androidx.compose.bom))
+    implementation(libs.androidx.compose.ui)
+    implementation(libs.androidx.compose.ui.graphics)
+    implementation(libs.androidx.compose.ui.tooling.preview)
+    implementation(libs.androidx.compose.material3)
+    implementation(libs.androidx.compose.material.icons.extended)
+    debugImplementation(libs.androidx.compose.ui.tooling)
 
-    // Coroutines
+    implementation(libs.androidx.lifecycle.runtime.compose)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation(libs.androidx.navigation.compose)
+
     implementation(libs.kotlinx.coroutines.android)
 
-    // Serialização JSON
-    implementation(libs.kotlinx.serialization.json)
+    implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.ktx)
+    ksp(libs.androidx.room.compiler)
 
-    // GPS
-    implementation(libs.play.services.location)
+    implementation(libs.androidx.datastore.preferences)
+    implementation(libs.androidx.work.runtime.ktx)
 
-    // MQTT
-    implementation(libs.hivemq.mqtt.client)
-
-    // HTTP (polling de config)
-    implementation(libs.retrofit)
-    implementation(libs.retrofit.gson)
-
-    // Testes
     testImplementation(libs.junit)
+    testImplementation(libs.robolectric)
     androidTestImplementation(libs.androidx.junit)
 }
